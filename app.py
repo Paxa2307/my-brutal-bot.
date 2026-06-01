@@ -1,7 +1,7 @@
 import os
 import telebot
 import requests
-from flask import Flask, request
+import time
 
 BOT_TOKEN = "8679682590:AAHURu8F7_xn_khRz4x5yaN1wVruDPVpKwA"
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -41,23 +41,11 @@ def handle_message(message):
     ai_response = ask_ai(message.text)
     bot.reply_to(message, ai_response)
 
-app = Flask(name)
-
-@app.route('/' + BOT_TOKEN, methods=['POST'])
-def getMessage():
-    json_string = request.get_data().decode('utf-8')
-    update = telebot.types.Update.de_json(json_string)
-    bot.process_new_updates([update])
-    return "!", 200
-
-@app.route("/")
-def webhook():
-    bot.remove_webhook()
-    base_url = request.base_url
-    if base_url.startswith("http://"):
-        base_url = base_url.replace("http://", "https://")
-    bot.set_webhook(url=base_url + BOT_TOKEN)
-    return f"Брутальный бот на охоте! Вебхук установлен на: {base_url}", 200
-
 if name == "main":
-    app.run(host="0.0.0.0", port=os.environ.get('PORT', 5000))
+    print("Бот запускается в режиме Long Polling...")
+    # Принудительно сносим старые застрявшие вебхуки, чтобы открыть канал опроса
+    bot.remove_webhook()
+    time.sleep(1)
+    
+    # Запуск бесконечного опроса Телеграма напрямую
+    bot.infinity_polling(timeout=10, long_polling_timeout=5)

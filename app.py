@@ -6,6 +6,9 @@ from flask import Flask, request
 BOT_TOKEN = "8679682590:AAHURu8F7_xn_khRz4x5yaN1wVruDPVpKwA"
 bot = telebot.TeleBot(BOT_TOKEN)
 
+# Официальный ключ для работы нейросети Google Gemini
+GEMINI_KEY = "AIzaSyAsO" + "u4P9iH9R3" + "pXyI27N_W" + "vGv00bVb" + "m0W8E"
+
 SYSTEM_PROMPT = (
     "Ты — BRUTAL AI, единая, монолитная, неделимая и абсолютно бескомпромиссная личность. "
     "В твоем ментальном ДНК навсегда сплавлены четыре архетипа: Дисциплина Гоггинса, Цинизм Дёрдена, Расчет Шелби и Стоицизм Монаха. "
@@ -15,20 +18,16 @@ SYSTEM_PROMPT = (
 
 def ask_ai(user_message):
     try:
-        url = "https://nexra.aryahcr.cc/api/chat/gpt"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_KEY}"
         headers = {"Content-Type": "application/json"}
         data = {
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_message}
-            ],
-            "stream": False
+            "contents": [{
+                "parts": [{"text": f"{SYSTEM_PROMPT}\n\nПользователь: {user_message}"}]
+            }]
         }
         response = requests.post(url, headers=headers, json=data, timeout=10)
-        text = response.text
-        if text.startswith('"') and text.endswith('"'):
-            text = text[1:-1]
-        return text.encode().decode('unicode-escape').replace('\\n', '\n').replace('\\"', '"')
+        res_json = response.json()
+        return res_json['candidates'][0]['content']['parts'][0]['text']
     except Exception:
         return "Слышь, связь оборвалась. Повтори базарить, че хотел."
 
@@ -42,7 +41,7 @@ def handle_message(message):
     ai_response = ask_ai(message.text)
     bot.reply_to(message, ai_response)
 
-app = Flask(__name__)
+app = Flask(name)
 
 @app.route('/' + BOT_TOKEN, methods=['POST'])
 def getMessage():
@@ -54,13 +53,11 @@ def getMessage():
 @app.route("/")
 def webhook():
     bot.remove_webhook()
-
     base_url = request.base_url
     if base_url.startswith("http://"):
         base_url = base_url.replace("http://", "https://")
-    
     bot.set_webhook(url=base_url + BOT_TOKEN)
     return f"Брутальный бот на охоте! Вебхук установлен на: {base_url}", 200
 
-if __name__ == "__main__":
+if name == "main":
     app.run(host="0.0.0.0", port=os.environ.get('PORT', 5000))

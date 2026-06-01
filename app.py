@@ -43,6 +43,7 @@ def handle_message(message):
     bot.reply_to(message, ai_response)
 
 app = Flask(__name__)
+
 @app.route('/' + BOT_TOKEN, methods=['POST'])
 def getMessage():
     json_string = request.get_data().decode('utf-8')
@@ -53,8 +54,13 @@ def getMessage():
 @app.route("/")
 def webhook():
     bot.remove_webhook()
-    bot.set_webhook(url='https://' + request.host + '/' + BOT_TOKEN)
-    return "Брутальный бот на охоте!", 200
+
+    base_url = request.base_url
+    if base_url.startswith("http://"):
+        base_url = base_url.replace("http://", "https://")
+    
+    bot.set_webhook(url=base_url + BOT_TOKEN)
+    return f"Брутальный бот на охоте! Вебхук установлен на: {base_url}", 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=os.environ.get('PORT', 5000))
